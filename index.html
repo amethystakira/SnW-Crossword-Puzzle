@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Interactive Crossword Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>Interactive Crossword (More Predicted Letters)</h1>
+
+<div class="container">
+    <div id="crossword"></div>
+    <div id="cluesBox">
+        <h2>Across</h2>
+        <ul id="across-list"></ul>
+        <h2>Down</h2>
+        <ul id="down-list"></ul>
+    </div>
+</div>
+
+<button id="checkBtn">Check Answers</button>
+<p id="result"></p>
+
+<script>
+const puzzle = {
+    size: 7,
+    grid: [
+        ["C","A","T","D","O","G","S"],
+        ["A","P","P","L","E","S","T"],
+        ["R","A","B","B","I","T","S"],
+        ["O","C","E","A","N","S","S"],
+        ["T","I","G","E","R","S","T"],
+        ["B","I","R","D","S","C","A"],
+        ["A","T","R","E","E","S","E"]
+    ],
+    across: [
+        {num:1,row:0,col:0,answer:"CAT",clue:"Small pet"},
+        {num:2,row:0,col:3,answer:"DOG",clue:"Loyal animal"},
+        {num:3,row:1,col:0,answer:"APPLES",clue:"Fruit"},
+        {num:4,row:2,col:0,answer:"RABBITS",clue:"Hopping animal"},
+        {num:5,row:3,col:0,answer:"OCEANS",clue:"Water body"},
+        {num:6,row:4,col:0,answer:"TIGERS",clue:"Big cat"},
+        {num:7,row:5,col:0,answer:"BIRDS",clue:"Flying creatures"},
+        {num:8,row:6,col:1,answer:"TREE",clue:"Tall plant"}
+    ],
+    down: [
+        {num:1,row:0,col:0,answer:"CARROT",clue:"Rabbit food"},
+        {num:2,row:0,col:1,answer:"ATOP",clue:"Above"},
+        {num:3,row:0,col:2,answer:"TIDE",clue:"Water level"},
+        {num:4,row:0,col:3,answer:"DOCTOR",clue:"Heals patients"},
+        {num:5,row:0,col:4,answer:"OGLE",clue:"Look closely"},
+        {num:6,row:0,col:5,answer:"GUEST",clue:"Visitor"},
+        {num:7,row:0,col:6,answer:"SPEED",clue:"Velocity"}
+    ],
+    reveal:[
+        {row:0,col:0},{row:0,col:1},{row:0,col:2},{row:0,col:3},
+        {row:1,col:0},{row:1,col:2},{row:1,col:4},
+        {row:2,col:0},{row:2,col:3},{row:2,col:5},
+        {row:3,col:1},{row:3,col:3},{row:3,col:5},
+        {row:4,col:0},{row:4,col:2},{row:4,col:4},
+        {row:5,col:0},{row:5,col:2},{row:5,col:4},
+        {row:6,col:1},{row:6,col:3}
+    ]
+};
+
+function createBoard() {
+    const board = document.getElementById("crossword");
+    board.innerHTML = "";
+    board.style.gridTemplateColumns = `repeat(${puzzle.size}, 45px)`;
+
+    for (let r=0; r<puzzle.size; r++){
+        for (let c=0; c<puzzle.size; c++){
+            const input = document.createElement("input");
+            input.maxLength = 1;
+            input.dataset.row = r;
+            input.dataset.col = c;
+
+            let prefill = puzzle.reveal.some(pos=>pos.row===r && pos.col===c);
+            if (prefill){
+                input.value = puzzle.grid[r][c];
+                input.disabled = true;
+                input.classList.add("prefilled");
+            }
+            input.oninput = ()=>checkCell(input);
+            input.onfocus = ()=>highlightWord(input);
+
+            input.addEventListener("keydown", (e)=>{
+                if(e.key==="ArrowRight") focusNext(r,c+1);
+                if(e.key==="ArrowLeft") focusNext(r,c-1);
+                if(e.key==="ArrowDown") focusNext(r+1,c);
+                if(e.key==="ArrowUp") focusNext(r-1,c);
+            });
+
+            board.appendChild(input);
+        }
+    }
+
+    const acrossList = document.getElementById("across-list");
+    const downList = document.getElementById("down-list");
+    acrossList.innerHTML=""; downList.innerHTML="";
+
+    puzzle.across.forEach(w=>{
+        let li=document.createElement("li");
+        li.innerText=`${w.num}. ${w.clue} (${w.answer.length})`;
+        acrossList.appendChild(li);
+    });
+
+    puzzle.down.forEach(w=>{
+        let li=document.createElement("li");
+        li.innerText=`${w.num}. ${w.clue} (${w.answer.length})`;
+        downList.appendChild(li);
+    });
+
+    document.getElementById("checkBtn").onclick = ()=>checkAll();
+}
+
+function checkCell(input){
+    const r = parseInt(input.dataset.row);
+    const c = parseInt(input.dataset.col);
+    if(input.value.toUpperCase()===puzzle.grid[r][c]){
+        input.classList.add("correct");
+        input.classList.remove("wrong");
+    }else{
+        input.classList.add("wrong");
+        input.classList.remove("correct");
+    }
+}
+
+function checkAll(){
+    let correct=true;
+    document.querySelectorAll("#crossword input").forEach(input=>{
+        const r = parseInt(input.dataset.row);
+        const c = parseInt(input.dataset.col);
+        if(input.value.toUpperCase()!==puzzle.grid[r][c]){
+            correct=false;
+        }
+    });
+    document.getElementById("result").innerText=correct?"All Correct! 🎉":"Some answers are wrong!";
+}
+
+function highlightWord(input){
+    document.querySelectorAll("#crossword input").forEach(cell=>{
+        cell.classList.remove("highlight");
+    });
+    const r=parseInt(input.dataset.row);
+    const c=parseInt(input.dataset.col);
+    puzzle.across.forEach(w=>{
+        if(r===w.row && c>=w.col && c<w.col+w.answer.length){
+            for(let i=0;i<w.answer.length;i++){
+                document.querySelector(`input[data-row='${w.row}'][data-col='${w.col+i}']`).classList.add("highlight");
+            }
+        }
+    });
+    puzzle.down.forEach(w=>{
+        if(c===w.col && r>=w.row && r<w.row+w.answer.length){
+            for(let i=0;i<w.answer.length;i++){
+                document.querySelector(`input[data-row='${w.row+i}'][data-col='${w.col}']`).classList.add("highlight");
+            }
+        }
+    });
+}
+
+function focusNext(r,c){
+    if(r<0||c<0||r>=puzzle.size||c>=puzzle.size) return;
+    const next=document.querySelector(`input[data-row='${r}'][data-col='${c}']`);
+    if(next && !next.disabled) next.focus();
+}
+
+createBoard();
+</script>
+
+</body>
+</html>
